@@ -1,22 +1,31 @@
 import scrapy
-import openpyxl
+from .parametrs_for_parses import ParamsForParser
 
-from .params_for_spider import start_url, url_for_next_page
+params = ParamsForParser(
+    name="all_items",
+    url="https://krasn.russcvet.ru/catalog",
+    allowed_domains="krasn.russcvet.ru",
+    item_link="div.name a::attr(href)",
+    pagen="https://krasn.russcvet.ru/catalog/?PAGEN_1=",
+    item_header={"item_name": "h1::text", "item_price": "div.price_new span::text"})
 
-class EnamelSpider(scrapy.Spider):
-    name = "all_items"
-    start_urls = [start_url]
+
+class ItemSpider(scrapy.Spider):
+    name = params.name
+    start_urls = [params.url]
+    allowed_domains = [params.allowed_domains]
 
     def parse(self, response, **kwargs):
-        for link in response.css('div.name a::attr(href)'):
+        for link in response.css(params.item_link):
             yield response.follow(link, callback=self.parse_item)
 
-        for i in range(2, 3):
-            next_page = url_for_next_page+{i}
+        for i in range(1, 93): #Необходимо указать колличество страниц для парсинга
+
+            next_page = params.pagen + str(i)
             yield response.follow(next_page, callback=self.parse)
 
     def parse_item(self, response):
         yield {
-            "name": response.css('h1::text').get(),
-            "price": response.css('div.price_new span::text').get()
+            "name": response.css(params.item_header["item_name"]).get(),
+            "price": response.css(params.item_header["item_price"]).get(),
         }
